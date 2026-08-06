@@ -77,9 +77,19 @@ Pseudorandom helpers.
 
 ### chains  (compiled)
 
-Windowing / drawing (`chains::clear`, `fillRect`, `line`, …).
+Windowing / drawing (`chains::clear`, `fillRect`, `line`, …). From-scratch —
+links only system libraries, no third-party dependencies.
+
+### sdl3  (compiled, third-party)
+
+SDL (Simple DirectMedia Layer) itself, redistributed so you can `import sdl3` and
+call SDL from Fusion. zlib-licensed — see [THIRD-PARTY.md](THIRD-PARTY.md).
 
 ## License
 
-Public domain / unlicensed — use freely. Every module here is from-scratch with
-no third-party dependencies beyond the system libraries.
+The modules in this repository are public domain / unlicensed — use freely.
+
+**Exception:** the `sdl3` module (`darwin-arm64/libsdl3.dylib`) is SDL itself
+(© 1997-2025 Sam Lantinga), redistributed under the **zlib license** — see
+[THIRD-PARTY.md](THIRD-PARTY.md). It retains its own license and is not part of
+the public-domain dedication.
