@@ -81,9 +81,5 @@ Windowing / drawing (`chains::clear`, `fillRect`, `line`, …).
 
 ## License
 
-The modules in this repository are public domain / unlicensed — use freely.
-
-**Exception:** `darwin-arm64/libsdl3.dylib` is a bundled third-party library
-(SDL, © 1997-2025 Sam Lantinga), redistributed under the **zlib license** — see
-[THIRD-PARTY.md](THIRD-PARTY.md). It retains its own license and is not part of
-the public-domain dedication.
+Public domain / unlicensed — use freely. Every module here is from-scratch with
+no third-party dependencies beyond the system libraries.
