@@ -1,0 +1,36 @@
+# memory — the raw-memory library for Fusion.
+#
+# The primitives (bytes / peek / poke / peekB / pokeB) are compiler intrinsics that are
+# OFF by default; this module turns them on (`@enable unsafe-memory`) and wraps them in a
+# clearer, named API. Pull it from fusion-stdlib and `import-all memory` to use raw memory
+# in a hosted program without sprinkling `@enable` yourself.
+#
+#   import-all memory
+#   var b = alloc(64)
+#   writeByte(b, 0, 255)
+#   var x = readByte(b, 0)
+
+@enable unsafe-memory
+
+# --- allocation ---
+func alloc(n) { return bytes(n) }               # an n-byte buffer
+
+# --- 32-bit access ---
+func readWord(p, off)  { return peek(p, off) }          # read a 32-bit word at p+off
+func writeWord(p, off, v) { poke(p, off, v); return 0 } # write a 32-bit word at p+off
+
+# --- byte access (width-exact; correct for MMIO) ---
+func readByte(p, off)  { return peekB(p, off) }         # read one byte at p+off
+func writeByte(p, off, v) { pokeB(p, off, v); return 0 } # write one byte at p+off
+
+# --- fill / copy ---
+func fill(p, n, byte) {
+    var i = 0
+    while (i < n) { pokeB(p, i, byte); i <- i + 1 }
+    return 0
+}
+func copy(dst, src, n) {
+    var i = 0
+    while (i < n) { pokeB(dst, i, peekB(src, i)); i <- i + 1 }
+    return 0
+}

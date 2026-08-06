@@ -1,0 +1,75 @@
+# lowlevel — the bare-metal floor for Fusion.
+#
+# Compiled/linked *into* the image by `fuse --low-level` (statically, at IR level —
+# NOT dyld-bound like a hosted .dylib). Provides the primitives an OS needs when
+# there is no OS underneath: raw MMIO, a freestanding console, and CPU control.
+#
+# Under --low-level the compiler retargets print/fsnPrintStr -> llPrintStr and
+# fsnPrintInt -> llPrintInt (see fuse.cpp doPrint), so `print(...)` in kernel code
+# writes bytes straight to the UART with nothing beneath it.
+#
+# The default console targets the arm64 `virt` board: PL011 UART0 @ 0x09000000.
+# Byte-wise MMIO only (pokeB/peekB = strb/ldrb = width-exact 1-byte access) keeps
+# register access exact regardless of the backend's wider LOAD/STORE width path.
+#
+# board-specific bits (consoleBase / consoleInit) belong in hardware/ eventually —
+# Hardcoded here for now.
+
+@enable unsafe-memory   # this module IS the bare-metal floor: it uses raw MMIO (pokeB/peekB)
+
+# --- board: arm64 virt PL011 ---
+func consoleBase() { return 150994944 }      # 0x09000000  (PL011 UART0 DR base)
+
+# PL011 register offsets
+func uartDR() { return 0 }                   # data register   (base + 0x00)
+func uartFR() { return 24 }                  # flag register   (base + 0x18); TXFF = bit 5 (0x20)
+
+# --- console ---
+# consoleInit: bring the UART up for this board. PL011 on QEMU virt is already
+# usable at reset, so it just needs the base to be known (it's hardcoded).
+func consoleInit() { return 0 }
+
+# putc: write one byte, spinning until the TX FIFO has room (TXFF clear).
+func putc(base, ch) {
+    loop {
+        var fr = peekB(base + 24, 0)          # read UARTFR low byte
+        if ((fr & 32) == 0) { break }         # TXFF (bit 5) clear -> room to send
+    }
+    pokeB(base, 0, ch)                        # write byte to UARTDR
+    return 0
+}
+
+# puts: write a Fusion string blob ([u64 len][bytes]) to the console.
+func puts(base, blob) {
+    var n = peek(blob, 0)                     # low 32 bits of the u64 length (masked)
+    var i = 0
+    while (i < n) {
+        putc(base, peekB(blob, 8 + i))        # byte i of the payload
+        i <- i + 1
+    }
+    return 0
+}
+
+# --- print retarget targets (called by the compiler under --low-level) ---
+func llPrintStr(blob) { return puts(consoleBase(), blob) }
+
+func llPrintInt(n) {
+    var base = consoleBase()
+    if (n == 0) { putc(base, 48); return 0 }  # '0'
+    var v = n
+    if (v < 0) { putc(base, 45); v <- 0 - v } # '-'
+    # collect digits into a 20-byte scratch on the stack via a fixed local pattern:
+    # emit by repeated division, most-significant first, using a place divisor.
+    var div = 1
+    while ((v / div) >= 10) { div <- div * 10 }
+    while (div > 0) {
+        var d = (v / div) % 10
+        putc(base, 48 + d)                    # '0' + digit
+        div <- div / 10
+    }
+    return 0
+}
+
+# --- cpu ---
+# halt: idle forever. Real wfi is a backend intrinsic (later); this spins.
+func halt() { loop { } return 0 }

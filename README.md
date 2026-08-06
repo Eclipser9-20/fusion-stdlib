@@ -1,25 +1,27 @@
 # Fusion stdlib
 
-Prebuilt standard-library modules for the Fusion language, hosted for
-`fuse fetch`. Each module is a compiled shared library that Fusion imports and
-binds dynamically at load — no headers, no static linking.
+Standard-library modules for the Fusion language, hosted for `fuse`. Two kinds:
+
+- **compiled** — a prebuilt shared library Fusion binds dynamically at load.
+- **source** — a `.fsn` module Fusion compiles/merges into the program (used by
+  `fuse --low-level` for freestanding builds; needs no host runtime).
 
 ## Layout
 
 ```
-<platform>/lib<module>.dylib      # e.g. darwin-arm64/libfilesystem.dylib
-src/<module>.c                    # module source
+<platform>/lib<module>.dylib      # compiled module   (e.g. darwin-arm64/libfilesystem.dylib)
+src/<module>.c                    # compiled-module source
+src/<module>.fsn                  # source module     (e.g. src/lowlevel.fsn)
 ```
 
-`fuse fetch <module>` downloads `<platform>/lib<module>.dylib` from the base URL
-in `FUSION_STDLIB_URL` and installs it into the shared modules directory.
+Resolution pulls from a base URL — `FUSION_STDLIB_URL`, a `~/.Fusion/stdlib.url`
+file, or the built-in default — as `<base>/<platform>/lib<module>.dylib`
+(compiled) or `<base>/src/<module>.fsn` (source).
 
 ```sh
-export FUSION_STDLIB_URL="https://raw.githubusercontent.com/<owner>/<repo>/<ref>"
-fuse fetch filesystem
+fuse fetch filesystem        # compiled: -> shared modules dir
+import-all lowlevel          # source:   pulled + merged at --low-level build
 ```
-
-`<ref>` is the branch or tag to pull from.
 
 ## Modules
 
@@ -54,6 +56,28 @@ Import with `import-all filesystem` to call functions bare (`fs_size(p)`), or
 Note: blob-returning functions currently surface to Fusion as a raw pointer
 until the front end infers their return type; the integer-returning functions
 are fully usable today.
+
+### lowlevel  (source)
+
+The bare-metal floor: raw MMIO and a freestanding console with no OS beneath it.
+Requires `@enable unsafe-memory` (it declares this itself). Provides byte-wise
+MMIO (`peekB`/`pokeB`), a UART console (`putc`/`puts`/`consoleBase`), and `halt`.
+Used by freestanding `fuse --low-level` builds; `print(...)` is retargeted to its
+UART writer.
+
+### memory  (source)
+
+Typed wrappers over raw memory (`@enable unsafe-memory`):
+`alloc`, `readWord`/`writeWord`, `readByte`/`writeByte`, `fill`, `copy`.
+`import-all memory`.
+
+### random  (compiled)
+
+Pseudorandom helpers.
+
+### chains  (compiled)
+
+Windowing / drawing (`chains::clear`, `fillRect`, `line`, …).
 
 ## License
 
