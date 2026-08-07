@@ -80,6 +80,23 @@ Pseudorandom helpers.
 Windowing / drawing (`chains::clear`, `fillRect`, `line`, …). From-scratch —
 links only system libraries, no third-party dependencies.
 
+### system  (compiled)
+
+Run shell commands.
+
+| function | returns | description |
+|----------|---------|-------------|
+| `call(cmd)` | int | run `cmd` through the shell; returns its exit code (0 = success, -1 = couldn't start) |
+
+```fusion
+import system
+OnStart() {
+    system::call("clear")
+    var code = system::call("ls -la")     # exit code back
+    return 0
+}
+```
+
 ### sdl3  (compiled, third-party)
 
 SDL (Simple DirectMedia Layer) itself, redistributed so you can `import sdl3` and
